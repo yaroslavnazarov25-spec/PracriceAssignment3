@@ -34,3 +34,51 @@ create table order_log (
     action varchar(50),
     log_date timestamp default current_timestamp
 );
+
+CREATE OR REPLACE FUNCTION calculate_order_total(
+p_order_id INT
+)
+RETURNS NUMERIC(10,2)
+LANGUAGE plpgsql
+AS $$
+DECLARE
+v_total NUMERIC(10,2);
+BEGIN
+SELECT COALESCE(SUM(quantity * price), 0)
+INTO v_total
+FROM order_items
+WHERE order_id = p_order_id;
+
+RETURN v_total;
+
+END;
+$$;
+
+CREATE OR REPLACE PROCEDURE create_order(
+p_customer_id INT
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+	IF NOT EXISTS (
+	    SELECT 
+	    FROM customers
+	    WHERE customer_id = p_customer_id
+	) 
+	THEN
+	    RAISE EXCEPTION
+	        'The customer does not exist';
+	END IF;
+	
+	INSERT INTO orders (
+	    customer_id,
+	    order_date,
+	    total_amount
+	)
+	VALUES (
+	    p_customer_id,
+	    CURRENT_TIMESTAMP,
+	    0
+	);
+END;
+$$;
