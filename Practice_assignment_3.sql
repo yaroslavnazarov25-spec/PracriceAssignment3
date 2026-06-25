@@ -139,3 +139,53 @@ BEGIN
 	WHERE product_id = p_product_id;
 END;
 $$;
+
+CREATE OR REPLACE FUNCTION update_order_total_trigger()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+	UPDATE orders
+	SET total_amount =
+	    calculate_order_total(
+	        COALESCE(NEW.order_id, OLD.order_id)
+	    )
+	WHERE order_id =
+	    COALESCE(NEW.order_id, OLD.order_id);
+	RETURN NULL;
+END;
+$$;
+
+CREATE TRIGGER update_order_total_triger
+AFTER INSERT OR UPDATE OR DELETE
+ON order_items
+FOR EACH ROW
+EXECUTE FUNCTION update_order_total_trigger();
+
+CREATE OR REPLACE FUNCTION order_log_creation()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+	INSERT INTO order_log (
+	    order_id,
+	    customer_id,
+	    action,
+	    log_date
+	)
+	VALUES (
+	    NEW.order_id,
+	    NEW.customer_id,
+	    'ORDER_CREATED',
+	    CURRENT_TIMESTAMP
+	);
+	
+	RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER order_log_triger
+AFTER INSERT
+ON orders
+FOR EACH ROW
+EXECUTE FUNCTION order_log_creation();
