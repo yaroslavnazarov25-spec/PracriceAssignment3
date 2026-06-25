@@ -82,3 +82,60 @@ BEGIN
 	);
 END;
 $$;
+
+CREATE OR REPLACE PROCEDURE add_product_to_order(
+p_order_id INT,
+p_product_id INT,
+p_quantity INT
+)
+LANGUAGE plpgsql
+AS $$
+DECLARE
+v_price NUMERIC(10,2);
+v_stock INT;
+BEGIN
+	IF p_quantity <= 0 
+	THEN
+	    RAISE EXCEPTION
+	        'Quantity must be more than zero';
+	END IF;
+	
+	SELECT
+	    price,
+	    stock_quantity
+	INTO
+	    v_price,
+	    v_stock
+	FROM products
+	WHERE product_id = p_product_id;
+	
+	IF NOT FOUND 
+	THEN
+	    RAISE EXCEPTION
+	        'The product does not exist';
+	END IF;
+	
+	IF v_stock < p_quantity 
+	THEN
+	    RAISE EXCEPTION
+	        'Not enough stock';
+	END IF;
+	
+	INSERT INTO order_items (
+	    order_id,
+	    product_id,
+	    quantity,
+	    price
+	)
+	VALUES (
+	    p_order_id,
+	    p_product_id,
+	    p_quantity,
+	    v_price
+	);
+	
+	UPDATE products
+	SET stock_quantity = stock_quantity - p_quantity
+	WHERE product_id = p_product_id;
+END;
+$$;
