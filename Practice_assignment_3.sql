@@ -189,3 +189,36 @@ AFTER INSERT
 ON orders
 FOR EACH ROW
 EXECUTE FUNCTION order_log_creation();
+
+
+
+INSERT INTO customers(full_name, email, balance) --creating a new customer
+VALUES
+('John Smith', 'john@example.com', 1000)
+
+INSERT INTO products(product_name, price, stock_quantity) --creating a new product
+VALUES
+('TV', 1500, 15)
+
+call create_order(2) --creates an order
+call create_order(80) --raises exeption (no customer with such id currently)
+
+call add_product_to_order(1,2,1) --adds a ptoduct to order
+call add_product_to_order(1,20,1) --raises exeption (no product with such id currently)
+call add_product_to_order(1,2,-1) --raises exeption (negative quantity)
+call add_product_to_order(1,2,50) --raises exeption (not enough stock currently)
+
+select --order total amount is increased after adding a product to it
+	order_id,
+	total_amount
+FROM orders
+WHERE order_id = 1;
+
+select --stock quantity decreased after adding it to an order
+	product_id,
+	product_name,
+	stock_quantity
+FROM products;
+
+select* --new order logs have been added
+from order_log ol 
